@@ -1,0 +1,14 @@
+[Unit]
+Description=HydePark Sync Poller Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/hydepark-sync
+ExecStart=/home/ubuntu/hydepark-sync/venv/bin/python /home/ubuntu/hydepark-sync/poller.py
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

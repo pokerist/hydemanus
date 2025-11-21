@@ -1,6 +1,6 @@
 import requests
 import logging
-from config import SUPABASE_BASE_URL, SUPABASE_API_KEY, SUPABASE_EVENTS_ENDPOINT, SUPABASE_COMPLETE_ENDPOINT, SUPABASE_FAIL_ENDPOINT, DRY_RUN, SUPABASE_UPDATE_STATUS_ENDPOINT
+from config import SUPABASE_BASE_URL, SUPABASE_API_KEY, SUPABASE_EVENTS_ENDPOINT, SUPABASE_COMPLETE_ENDPOINT, SUPABASE_FAIL_ENDPOINT, DRY_RUN, SUPABASE_UPDATE_STATUS_ENDPOINT, SUPABASE_ADMIN_BEARER
 from database import add_request_log, create_log_entry
 
 logger = logging.getLogger('HydeParkSync.SupabaseClient')
@@ -11,7 +11,8 @@ class SupabaseClient:
     def __init__(self):
         self.base_url = SUPABASE_BASE_URL
         self.headers = {
-            "Authorization": f"Bearer {SUPABASE_API_KEY}",
+            "X-API-Key": SUPABASE_API_KEY,
+            "Authorization": f"Bearer {SUPABASE_ADMIN_BEARER}",
             "Content-Type": "application/json"
         }
 
