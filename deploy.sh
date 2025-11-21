@@ -2,7 +2,7 @@
 
 # --- Configuration ---
 PROJECT_DIR="/opt/hydepark-sync"
-SOURCE_DIR="/home/ubuntu/hydepark-sync"
+SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVICE_NAME="hydepark-sync.service"
 SERVICE_FILE="$SOURCE_DIR/systemd/$SERVICE_NAME"
 VENV_PATH="$PROJECT_DIR/venv"
@@ -38,12 +38,12 @@ sudo chown -R $USER:$USER $PROJECT_DIR || { log_error "Failed to set ownership."
 
 # --- 3. Copy Files ---
 log "Copying project files..."
-rsync -av --exclude 'venv' $SOURCE_DIR/ $PROJECT_DIR/ || { log_error "Failed to copy files."; exit 1; }
+rsync -av --exclude 'venv' --exclude '.venv' $SOURCE_DIR/ $PROJECT_DIR/ || { log_error "Failed to copy files."; exit 1; }
 
 # --- 4. Virtual Environment and Python Dependencies (Skipped in quick mode) ---
 if [ "$QUICK_MODE" = false ]; then
     log "Creating virtual environment and installing Python dependencies..."
-    python3.11 -m venv $VENV_PATH || { log_error "Failed to create virtual environment."; exit 1; }
+    python3 -m venv $VENV_PATH || { log_error "Failed to create virtual environment."; exit 1; }
     
     # Install dependencies. We will skip dlib/face-recognition due to known compilation issues in sandboxes
     # In a real environment, the full requirements.txt would be used.
@@ -58,7 +58,7 @@ fi
 # --- 5. Systemd Service Setup ---
 log "Installing Systemd service file..."
 # Update the service file to point to the correct project directory and venv
-sed "s|/home/ubuntu/hydepark-sync|$PROJECT_DIR|g" $SERVICE_FILE | sed "s|/home/ubuntu/hydepark-sync/venv|$VENV_PATH|g" > /tmp/$SERVICE_NAME
+sed "s|/home/ubuntu/hydepark-sync|$PROJECT_DIR|g" $SERVICE_FILE | sed "s|/home/ubuntu/hydepark-sync/venv|$VENV_PATH|g" | sed "s|User=ubuntu|User=$USER|g" > /tmp/$SERVICE_NAME
 sudo mv /tmp/$SERVICE_NAME /etc/systemd/system/$SERVICE_NAME || { log_error "Failed to move service file."; exit 1; }
 
 log "Reloading Systemd daemon and enabling service..."
