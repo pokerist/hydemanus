@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}لوحة المعلومات{% endblock %}
+{% block content %}
+    <h1>لوحة المعلومات</h1>
+
+    <div class="card-container">
+        <div class="card">
+            <h3>إجمالي العمال المزامنين</h3>
+            <p>{{ stats.total_workers }}</p>
+        </div>
+        <div class="card">
+            <h3>إجمالي سجلات API</h3>
+            <p>{{ stats.total_logs }}</p>
+        </div>
+        <div class="card">
+            <h3>فاصل المزامنة</h3>
+            <p>{{ stats.polling_interval }} ثانية</p>
+        </div>
+    </div>
+
+    <h2>آخر عمليات المزامنة</h2>
+    {% if latest_logs %}
+    <table>
+        <thead>
+            <tr>
+                <th>التاريخ والوقت</th>
+                <th>نوع API</th>
+                <th>النهاية (Endpoint)</th>
+                <th>الحالة</th>
+                <th>الرسالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in latest_logs %}
+            <tr>
+                <td>{{ log.timestamp }}</td>
+                <td>{{ log.api_type }}</td>
+                <td dir="ltr">{{ log.endpoint }}</td>
+                <td class="{{ 'log-success' if log.success else 'log-fail' }}">
+                    {{ 'نجاح' if log.success else 'فشل' }}
+                </td>
+                <td>{{ log.message or 'لا توجد رسالة' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>لا توجد سجلات API حديثة لعرضها.</p>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,10 @@
+flask
+requests
+pillow
+numpy
+opencv-python
+face-recognition
+dlib
+python-dateutil
+APScheduler
+gunicorn

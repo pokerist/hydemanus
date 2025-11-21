@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}تسجيل الدخول{% endblock %}
+{% block content %}
+<div class="login-container">
+    <h1>تسجيل الدخول</h1>
+    {% if error %}
+        <p class="error-message">{{ error }}</p>
+    {% endif %}
+    <form method="POST" action="{{ url_for('login') }}">
+        <input type="text" name="username" placeholder="اسم المستخدم" required>
+        <input type="password" name="password" placeholder="كلمة المرور" required>
+        <button type="submit">دخول</button>
+    </form>
+</div>
+{% endblock %}

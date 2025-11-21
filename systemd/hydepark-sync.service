@@ -1,0 +1,14 @@
+[Unit]
+Description=HydePark Sync System Service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/hydepark-sync
+ExecStart=/home/ubuntu/hydepark-sync/venv/bin/gunicorn -w 4 -b 0.0.0.0:8080 main:app
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

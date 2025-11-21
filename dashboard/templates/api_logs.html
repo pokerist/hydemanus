@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}سجلات API{% endblock %}
+{% block content %}
+    <h1>سجلات API</h1>
+
+    {% if logs %}
+    <table>
+        <thead>
+            <tr>
+                <th>التاريخ والوقت</th>
+                <th>النوع</th>
+                <th>النهاية (Endpoint)</th>
+                <th>الحالة</th>
+                <th>الرسالة</th>
+                <th>التفاصيل</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.timestamp }}</td>
+                <td>{{ log.api_type }}</td>
+                <td dir="ltr">{{ log.endpoint }}</td>
+                <td class="{{ 'log-success' if log.success else 'log-fail' }}">
+                    {{ 'نجاح' if log.success else 'فشل' }} ({{ log.status_code }})
+                </td>
+                <td>{{ log.message or 'لا توجد رسالة' }}</td>
+                <td>
+                    <details>
+                        <summary>عرض البيانات</summary>
+                        <div class="log-details">
+                            <strong>طلب (Request):</strong>
+                            <pre>{{ log.request_data | tojson(indent=2) }}</pre>
+                            <strong>استجابة (Response):</strong>
+                            <pre>{{ log.response_data | tojson(indent=2) }}</pre>
+                        </div>
+                    </details>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>لا توجد سجلات API حاليًا.</p>
+    {% endif %}
+
+{% endblock %}

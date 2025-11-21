@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}العمال{% endblock %}
+{% block content %}
+    <h1>قائمة العمال المزامنين ({{ workers | length }})</h1>
+
+    {% if workers %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>الاسم</th>
+                <th>الرقم الوطني</th>
+                <th>جنس</th>
+                <th>هاتف</th>
+                <th>ID في HikCentral</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for worker in workers %}
+            <tr>
+                <td>{{ worker.id }}</td>
+                <td>{{ worker.name }}</td>
+                <td>{{ worker.national_id }}</td>
+                <td>{{ 'ذكر' if worker.gender == '1' else 'أنثى' }}</td>
+                <td>{{ worker.phone }}</td>
+                <td>{{ worker.hikcentral_person_id or 'غير مزامن' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>لا يوجد عمال مزامنين حاليًا.</p>
+    {% endif %}
+
+{% endblock %}

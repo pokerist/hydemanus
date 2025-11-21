@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HydePark Sync System - {% block title %}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        {% if session.logged_in %}
+        <header>
+            <div class="logo">نظام مزامنة هايدبارك</div>
+            <nav>
+                <a href="{{ url_for('dashboard') }}"><i class="fas fa-tachometer-alt"></i> لوحة المعلومات</a>
+                <a href="{{ url_for('workers_view') }}"><i class="fas fa-users"></i> العمال</a>
+                <a href="{{ url_for('api_logs') }}"><i class="fas fa-clipboard-list"></i> سجلات API</a>
+                <a href="{{ url_for('settings_view') }}"><i class="fas fa-cog"></i> الإعدادات</a>
+                <a href="{{ url_for('logout') }}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج</a>
+            </nav>
+        </header>
+        {% endif %}
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        <footer>
+            <p>&copy; 2025 HydePark Sync System. جميع الحقوق محفوظة.</p>
+        </footer>
+    </div>
+</body>
+</html>

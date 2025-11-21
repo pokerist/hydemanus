@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}الإعدادات{% endblock %}
+{% block content %}
+    <h1>إعدادات النظام (للقراءة فقط)</h1>
+
+    <ul class="settings-list">
+        <li>
+            <strong>عنوان HikCentral API:</strong>
+            <span dir="ltr">{{ settings.HIKCENTRAL_BASE_URL }}</span>
+        </li>
+        <li>
+            <strong>عنوان Supabase API:</strong>
+            <span dir="ltr">{{ settings.SUPABASE_BASE_URL }}</span>
+        </li>
+        <li>
+            <strong>فاصل المزامنة:</strong>
+            <span>{{ settings.POLLING_INTERVAL_SECONDS }} ثانية</span>
+        </li>
+        <li>
+            <strong>مسار قاعدة بيانات العمال:</strong>
+            <span dir="ltr">{{ settings.WORKERS_DB_PATH }}</span>
+        </li>
+        <li>
+            <strong>مسار سجلات الطلبات:</strong>
+            <span dir="ltr">{{ settings.REQUEST_LOGS_DB_PATH }}</span>
+        </li>
+        <li>
+            <strong>منفذ واجهة الويب:</strong>
+            <span>{{ settings.DASHBOARD_PORT }}</span>
+        </li>
+    </ul>
+
+{% endblock %}
