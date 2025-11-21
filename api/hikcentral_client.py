@@ -6,7 +6,7 @@ import hmac
 import hashlib
 import base64
 import json
-from config import HIKCENTRAL_BASE_URL, HIKCENTRAL_APP_KEY, HIKCENTRAL_APP_SECRET, HIKCENTRAL_PRIVILEGE_GROUP_ID, DRY_RUN
+from config import HIKCENTRAL_BASE_URL, HIKCENTRAL_APP_KEY, HIKCENTRAL_APP_SECRET, HIKCENTRAL_PRIVILEGE_GROUP_ID, DRY_RUN, HIKCENTRAL_SIGNATURE_MODE, HIKCENTRAL_ORG_INDEX_CODE
 from database import add_request_log, create_log_entry
 
 logger = logging.getLogger('HydeParkSync.HikCentralClient')
@@ -21,33 +21,29 @@ class HikCentralClient:
         self.privilege_group_id = HIKCENTRAL_PRIVILEGE_GROUP_ID
 
     def _generate_signature_headers(self, path, body_json=""):
-        """Generates the required headers for Artemis v2 Signature."""
+        if HIKCENTRAL_SIGNATURE_MODE == "canonical":
+            string_to_sign = "POST\n" + "application/json\n" + "\n\n\n" + f"x-ca-key:{self.app_key}\n" + f"/artemis{path}"
+            signature = hmac.new(self.app_secret.encode('utf-8'), string_to_sign.encode('utf-8'), hashlib.sha256).digest()
+            signature_base64 = base64.b64encode(signature).decode('utf-8')
+            return {
+                "Content-Type": "application/json",
+                "X-Ca-Key": self.app_key,
+                "X-Ca-Signature": signature_base64,
+                "X-Ca-Signature-Headers": "x-ca-key",
+            }
         nonce = str(uuid.uuid4())
-        timestamp = str(int(time.time() * 1000)) # Milliseconds timestamp
-        
-        # 1. Construct the string to be signed
-        # StringToSign = AppKey + Nonce + Timestamp + Body (if POST/PUT)
+        timestamp = str(int(time.time() * 1000))
         string_to_sign = f"{self.app_key}{nonce}{timestamp}{body_json}"
-        
-        # 2. Sign the string using HMAC-SHA256 with the AppSecret
-        signature = hmac.new(
-            self.app_secret.encode('utf-8'),
-            string_to_sign.encode('utf-8'),
-            hashlib.sha256
-        ).digest()
-        
-        # 3. Encode the signature in Base64
+        signature = hmac.new(self.app_secret.encode('utf-8'), string_to_sign.encode('utf-8'), hashlib.sha256).digest()
         signature_base64 = base64.b64encode(signature).decode('utf-8')
-
-        headers = {
+        return {
             "Content-Type": "application/json",
             "X-Ca-Key": self.app_key,
             "X-Ca-Nonce": nonce,
             "X-Ca-Timestamp": timestamp,
             "X-Ca-Signature": signature_base64,
-            "X-Ca-Signature-Headers": "X-Ca-Key,X-Ca-Nonce,X-Ca-Timestamp"
+            "X-Ca-Signature-Headers": "X-Ca-Key,X-Ca-Nonce,X-Ca-Timestamp",
         }
-        return headers
 
     def _request(self, method, path, data=None):
         """Generic request handler with signature generation and logging."""
@@ -68,7 +64,7 @@ class HikCentralClient:
         try:
             # Note: HikCentral often uses self-signed certificates, so verify=False might be needed in a real-world scenario
             # For this project, we'll assume a secure connection or that the environment handles the certificate.
-            response = requests.request(method, url, headers=headers, data=body_json, timeout=15, verify=False)
+            response = requests.request(method, url, headers=headers, data=body_json, timeout=30, verify=False)
             response.raise_for_status()
             
             response_json = response.json()
@@ -107,17 +103,18 @@ class HikCentralClient:
     def add_worker(self, worker_data):
         """Adds a worker to HikCentral (Person and Face)."""
         # 1. Add Person
-        person_path = "/api/resource/v1/person/single/add"
+        person_path = "/api/resource/v2/person/single/add"
         person_payload = {
+            "personCode": str(worker_data.get('national_id') or worker_data.get('id')),
             "personName": worker_data.get('name'),
-            "personNo": str(worker_data.get('id')), # Use worker ID as personNo
-            "orgIndexCode": "1", # Assuming a default organization code
-            "gender": worker_data.get('gender', '1'), # 1: Male, 2: Female
+            "gender": str(worker_data.get('gender', '1')),
             "phoneNo": worker_data.get('phone', ''),
             "email": worker_data.get('email', ''),
-            "certificateType": 1, # ID Card
-            "certificateNo": worker_data.get('national_id', ''),
-            "privilegeGroupIndexCode": self.privilege_group_id
+            "beginTime": worker_data.get('valid_from', ''),
+            "endTime": worker_data.get('valid_to', ''),
+            "orgIndexCode": HIKCENTRAL_ORG_INDEX_CODE,
+            "certificateType": "1",
+            "certificateNo": str(worker_data.get('national_id') or ''),
         }
         if DRY_RUN:
             add_request_log(create_log_entry(
@@ -136,7 +133,7 @@ class HikCentralClient:
             logger.error(f"Failed to add person {worker_data.get('id')}: {person_response}")
             return None
 
-        person_id = person_response.get('data', {}).get('personId')
+        person_id = person_response.get('data', {}).get('personId') or person_payload.get('personCode')
         if not person_id:
             logger.error(f"Person ID not returned for worker {worker_data.get('id')}")
             return None
@@ -152,11 +149,8 @@ class HikCentralClient:
         return person_id
 
     def delete_worker(self, person_id):
-        """Deletes a worker from HikCentral by Person ID."""
-        path = "/api/resource/v1/person/single/delete"
-        payload = {
-            "personId": person_id
-        }
+        path = "/api/resource/v2/person/batch"
+        payload = {"personIds": [person_id]}
         if DRY_RUN:
             add_request_log(create_log_entry(
                 api_type="HikCentral",
@@ -180,16 +174,15 @@ class HikCentralClient:
     def update_worker(self, person_id, worker_data):
         """Updates a worker's information in HikCentral."""
         # This is a simplified update. Real update would involve person update and face update/delete/add.
-        path = "/api/resource/v1/person/single/update"
+        path = "/api/resource/v2/person/single/update"
         payload = {
             "personId": person_id,
+            "personCode": str(worker_data.get('national_id') or worker_data.get('id')),
             "personName": worker_data.get('name'),
-            "personNo": str(worker_data.get('id')),
-            "gender": worker_data.get('gender', '1'),
+            "gender": str(worker_data.get('gender', '1')),
             "phoneNo": worker_data.get('phone', ''),
             "email": worker_data.get('email', ''),
-            "certificateNo": worker_data.get('national_id', ''),
-            "privilegeGroupIndexCode": self.privilege_group_id
+            "certificateNo": str(worker_data.get('national_id') or ''),
         }
         if DRY_RUN:
             add_request_log(create_log_entry(
@@ -212,11 +205,9 @@ class HikCentralClient:
         return False
 
     def extend_worker_validity(self, person_id, valid_to):
-        """Extends a worker's validity/permission period. Placeholder implementation."""
-        path = "/api/resource/v1/person/single/update"
+        path = "/api/resource/v2/person/single/update"
         payload = {
             "personId": person_id,
-            # Placeholder field; real HikCentral privileges would be updated via access/authorization APIs
             "remark": f"Validity extended to {valid_to}"
         }
         if DRY_RUN:
@@ -235,6 +226,36 @@ class HikCentralClient:
             logger.info(f"Extended validity for PersonID {person_id} to {valid_to}")
             return True
         logger.error(f"Failed to extend validity for person {person_id}: {response}")
+        return False
+
+    def add_face_to_person(self, person_id, face_base64):
+        path = "/api/resource/v1/encodeDevice/personFace"
+        payload = {
+            "personId": person_id,
+            "faceData": face_base64,
+            "faceId": f"face_{person_id}_{int(time.time())}",
+        }
+        response = self._request("POST", path, payload)
+        if response and response.get('code') == '0':
+            logger.info(f"Successfully added face for PersonID: {person_id}")
+            return True
+        logger.error(f"Failed to add face for person {person_id}: {response}")
+        return False
+
+    def add_to_privilege_group(self, person_id, group_id=None, valid_from="", valid_to=""):
+        gid = group_id or self.privilege_group_id
+        path = "/api/acm/v1/face/privileges"
+        payload = {
+            "personId": person_id,
+            "privilegeGroupId": gid,
+            "validFrom": valid_from,
+            "validTo": valid_to,
+        }
+        response = self._request("POST", path, payload)
+        if response and response.get('code') == '0':
+            logger.info(f"Privilege granted for PersonID: {person_id}")
+            return True
+        logger.error(f"Failed to grant privilege for person {person_id}: {response}")
         return False
 
 # Suppress InsecureRequestWarning for verify=False

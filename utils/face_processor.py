@@ -127,3 +127,18 @@ def find_duplicate_by_face(image_url, worker_id):
                 os.remove(image_path)
         except Exception:
             pass
+
+def get_image_base64(image_url, worker_id):
+    image_path = download_image(image_url, worker_id)
+    if not image_path:
+        return None
+    try:
+        with open(image_path, 'rb') as f:
+            import base64
+            return base64.b64encode(f.read()).decode('utf-8')
+    finally:
+        try:
+            if os.path.exists(image_path):
+                os.remove(image_path)
+        except Exception:
+            pass

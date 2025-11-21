@@ -2,7 +2,7 @@ import logging
 from api.supabase_client import SupabaseClient
 from api.hikcentral_client import HikCentralClient
 from database import load_workers, save_workers, add_or_update_worker, delete_worker
-from utils.face_processor import process_face_image, delete_face_image, find_duplicate_by_face
+from utils.face_processor import process_face_image, delete_face_image, find_duplicate_by_face, get_image_base64
 
 logger = logging.getLogger('HydeParkSync.EventProcessor')
 
@@ -148,6 +148,12 @@ def handle_worker_created(event_id, worker):
             if person_id:
                 new_w['hikcentral_person_id'] = person_id
                 process_face_image(new_w)
+                face_b64 = None
+                if new_w.get('face_image_url'):
+                    face_b64 = get_image_base64(new_w['face_image_url'], new_w.get('id'))
+                if face_b64:
+                    hikcentral_client.add_face_to_person(person_id, face_b64)
+                hikcentral_client.add_to_privilege_group(person_id, valid_from=new_w.get('valid_from', ''), valid_to=new_w.get('valid_to', ''))
                 add_or_update_worker(new_w)
                 success = True
             else:
